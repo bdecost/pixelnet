@@ -9,7 +9,7 @@ from keras.applications.inception_v3 import conv2d_bn
 
 from .upsample import sparse_upsample, sparse_upsample_output_shape
 
-def pixelnet_model(nclasses=4):
+def pixelnet_model(nclasses=4, inference=False):
     """ Use sparse upsample implementations to define a PixelNet model
 
     @article{pixelnet,
@@ -61,29 +61,46 @@ def pixelnet_model(nclasses=4):
     x = conv2d_bn(x, 128, 3, 3, name='block5_conv3')
     x5 = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
 
-    upsample = Lambda(
-        sparse_upsample,
-        output_shape=sparse_upsample_output_shape,
-        name='sparse_upsample'
-    )
-    sel1 = upsample([x1, inputcoord])
-    sel2 = upsample([x2, inputcoord])
-    sel3 = upsample([x3, inputcoord])
-    sel4 = upsample([x4, inputcoord])
-    sel5 = upsample([x5, inputcoord])
+    batchsize, h, w = tf.shape(inputdata)[0], tf.shape(inputdata)[1], tf.shape(inputdata)[2]
+
+    if inference:
+        print('inference phase.')
+        upsample = Lambda(
+            lambda t: tf.image.resize_images(t, (h,w)),
+            output_shape=lambda s: (s[0], h, w, s[-1]),
+            name='tf_upsample'
+        )
+        h1 = upsample(x1)
+        h2 = upsample(x2)
+        h3 = upsample(x3)
+        h4 = upsample(x4)
+        h5 = upsample(x5)
+
+    else:
+        print('training phase.')
+        upsample = Lambda(
+            sparse_upsample,
+            output_shape=sparse_upsample_output_shape,
+            name='sparse_upsample'
+        )
+        h1 = upsample([x1, inputcoord])
+        h2 = upsample([x2, inputcoord])
+        h3 = upsample([x3, inputcoord])
+        h4 = upsample([x4, inputcoord])
+        h5 = upsample([x5, inputcoord])
 
     # now we have shape (batch, sample, channel)
-    x = Concatenate()([sel1, sel2, sel3, sel4, sel5])
+    x = Concatenate()([h1, h2, h3, h4, h5])
 
     # flatten into pixel features
-    batchsize, npix, nchannels = tf.shape(x)[0], tf.shape(x)[1], tf.shape(x)[2]
+    nchannels = tf.shape(x)[-1]
 
-    flatten = Lambda(
+    flatten_pixels = Lambda(
         lambda t: K.reshape(t, (-1, nchannels)),
-        output_shape=lambda s: (-1, s[2]),
+        output_shape=lambda s: (-1, s[-1]),
         name='flatten_pixel_features'
     )
-    x = flatten(x)
+    x = flatten_pixels(x)
 
     x = Dense(1024, activation='relu')(x)
     x = Dropout(0.5)(x)
@@ -93,12 +110,23 @@ def pixelnet_model(nclasses=4):
 
     x = Dense(nclasses, activation='softmax', name='predictions')(x)
 
-    unflatten = Lambda(
-        lambda t: K.reshape(t, (batchsize, npix, nclasses)),
-        output_shape=lambda s: (4, 2048, nclasses),
-        name='unflatten_pixel_features'
-    )
+    if inference:
+        unflatten = Lambda(
+            lambda t: K.reshape(t, (batchsize, h, w, nclasses)),
+            output_shape=lambda s: (1, 484, 645, nclasses),
+            name='unflatten_pixel_features'
+        )
+    else:
+        npix = tf.shape(inputcoord)[1]
+        unflatten = Lambda(
+            lambda t: K.reshape(t, (batchsize, npix, nclasses)),
+            output_shape=lambda s: (4, 2048, nclasses),
+            name='unflatten_pixel_features'
+        )
     x = unflatten(x)
-    
-    model = Model(inputs=[inputdata, inputcoord], outputs=x)
+
+    if inference:
+        model = Model(inputs=inputdata, outputs=x)
+    else:
+        model = Model(inputs=[inputdata, inputcoord], outputs=x)
     return model
