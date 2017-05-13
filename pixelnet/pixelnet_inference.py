@@ -9,11 +9,7 @@ from keras import backend as K
 
 from keras.applications.inception_v3 import conv2d_bn
 
-import os
-import sys
-sys.path.append(os.getcwd())
-
-from uhcsseg.upsample import sparse_upsample, sparse_upsample_output_shape
+from .upsample import sparse_upsample, sparse_upsample_output_shape
 
 def pixelnet_model(nclasses=4):
     """ Use sparse upsample implementations to define a PixelNet model

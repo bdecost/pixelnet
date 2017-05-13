@@ -13,7 +13,7 @@ from keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
 import sys
 sys.path.append(os.getcwd())
 
-from uhcsseg.pixelnet import pixelnet_model
+from pixelnet.pixelnet import pixelnet_model
 from uhcsseg.io import load_dataset
 
 # suppress some of the noisier tensorflow log messages
