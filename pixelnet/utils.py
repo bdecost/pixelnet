@@ -33,8 +33,8 @@ def random_training_samples(images, labels, batchsize=4, ntrain=20, npix=2048, n
         
         # convert labels to categorical indicators for cross-entropy loss
         s = pixel_labels.shape
-        pixel_labels = to_categorical(pixel_labels.flat, num_classes=NCLASSES)
-        pixel_labels = pixel_labels.reshape((s[0], s[1], NCLASSES))
+        pixel_labels = to_categorical(pixel_labels.flat, num_classes=nclasses)
+        pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([t_ims, coords], pixel_labels)
 
