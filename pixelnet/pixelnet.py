@@ -111,16 +111,24 @@ def pixelnet_model(nclasses=4, inference=False):
     x = Dense(nclasses, activation='softmax', name='predictions')(x)
 
     if inference:
+        # note: output_shape wants the static shape (None, None, None, nclasses)
+        # but reshape needs the dynamic shape (int, int, int, nclasses)
+        b_dyn, h_dyn, w_dyn, _ = inputdata.shape
         unflatten = Lambda(
             lambda t: K.reshape(t, (batchsize, h, w, nclasses)),
-            output_shape=lambda s: (1, 484, 645, nclasses),
+            output_shape=lambda s: (b_dyn, h_dyn, w_dyn, nclasses),
             name='unflatten_pixel_features'
         )
     else:
-        npix = tf.shape(inputcoord)[1]
+        # note: output_shape wants the static shape (None, None, nclasses)
+        # but reshape needs the dynamic shape (int, int, nclasses)
+        # actually, batchsize can be either, but npix needs to be the dynamic value.
+        npix = K.shape(inputcoord)[1]
+        _, npix_dyn, _ = inputcoord.shape
         unflatten = Lambda(
             lambda t: K.reshape(t, (batchsize, npix, nclasses)),
-            output_shape=lambda s: (4, 2048, nclasses),
+            # output_shape=lambda s: (4, 2048, nclasses),
+            output_shape=lambda s: (batchsize, npix_dyn, nclasses),
             name='unflatten_pixel_features'
         )
     x = unflatten(x)
