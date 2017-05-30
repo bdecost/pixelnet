@@ -12,7 +12,7 @@ sys.path.append(os.getcwd())
 sys.path.append('../uhcs-segment')
 
 from pixelnet.pixelnet import pixelnet_model
-from pixelnet.utils import random_training_samples, random_validation_samples
+from pixelnet.utils import random_pixel_samples
 from uhcsseg import data
 
 # suppress some of the noisier tensorflow log messages
@@ -23,7 +23,9 @@ if __name__ == '__main__':
     images, labels, names = data.load_dataset(datafile, cropbar=38)
     print(images.shape)
     images = data.preprocess_images(images)
-        
+
+    # add channel axis
+    images = images[:,:,:,np.newaxis]
     N, h, w, _ = images.shape
 
     batchsize = 4
