@@ -2,7 +2,8 @@
 import numpy as np
 import tensorflow as tf
 from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, Lambda, Layer, Concatenate, Dropout, Dense
+from keras.layers import Input, Conv2D, MaxPooling2D, Lambda, Layer, Concatenate, Dropout, Dense, Activation
+from keras.layers.normalization import BatchNormalization
 from keras import backend as K
 
 from .upsample import sparse_upsample, sparse_upsample_output_shape
