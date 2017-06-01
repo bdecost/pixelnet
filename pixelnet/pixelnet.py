@@ -5,9 +5,21 @@ from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, Lambda, Layer, Concatenate, Dropout, Dense
 from keras import backend as K
 
-from keras.applications.inception_v3 import conv2d_bn
-
 from .upsample import sparse_upsample, sparse_upsample_output_shape
+
+def conv2d_bn(x, n_channels, n_rows, n_cols, weight_decay=1e-5, padding='same', strides=(1,1), name=None):
+
+    if K.image_data_format() == 'channels_first':
+        bn_axis = 1
+    else:
+        bn_axis = 3
+
+    x = Conv2D(n_channels, (n_rows, n_cols),
+               strides=strides, padding=padding,
+               kernel_initializer='he_normal')(x)
+    x = BatchNormalization(axis=bn_axis, scale=False)(x)
+    x = Activation('relu', name=name)(x)
+    return x
 
 def pixelnet_model(nclasses=4, inference=False):
     """ Use sparse upsample implementations to define a PixelNet model
