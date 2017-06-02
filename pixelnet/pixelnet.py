@@ -2,6 +2,7 @@
 import numpy as np
 import tensorflow as tf
 from keras.models import Model
+from keras import regularizers
 from keras.layers import Input, Conv2D, MaxPooling2D, Lambda, Layer, Concatenate, Dropout, Dense, Activation
 from keras.layers.normalization import BatchNormalization
 from keras import backend as K
@@ -17,7 +18,8 @@ def conv2d_bn(x, n_channels, n_rows, n_cols, weight_decay=1e-5, padding='same', 
 
     x = Conv2D(n_channels, (n_rows, n_cols),
                strides=strides, padding=padding,
-               kernel_initializer='he_normal')(x)
+               kernel_initializer='he_normal',
+               kernel_regularizer=regularizers.l2(0.01))(x)
     x = BatchNormalization(axis=bn_axis, scale=False)(x)
     x = Activation('relu', name=name)(x)
     return x
@@ -115,10 +117,10 @@ def pixelnet_model(nclasses=4, inference=False):
     )
     x = flatten_pixels(x)
 
-    x = Dense(1024, activation='relu')(x)
+    x = Dense(1024, activation='relu',kernel_regularizer=regularizers.l2(0.01))(x)
     x = Dropout(0.5)(x)
     
-    x = Dense(1024, activation='relu')(x)
+    x = Dense(1024, activation='relu',kernel_regularizer=regularizers.l2(0.01))(x)
     x = Dropout(0.5)(x)
 
     x = Dense(nclasses, activation='softmax', name='predictions')(x)
