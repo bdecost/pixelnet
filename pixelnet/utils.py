@@ -39,13 +39,25 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
 
         yield ([sample_images, coords], pixel_labels)
 
-def smooth_labels(labels, smoothing=0.0):
+def smooth_labels(labels, confidence=1.0):
     """ Apply label smoothing for classification task 
         Correct class should be 1-smoothing
         Other classes should be smoothing/(nclasses-1)"""
     nclasses = labels.shape[1]
-    labels = labels * (1 - smoothing)
-    labels[labels > 0] = labels[labels > 0] + (smoothing / (nclasses - 1))
+    if type(confidence) is int:
+        smoothing = 1 - confidence
+        labels = labels * (1 - smoothing)
+        labels[labels > 0] = labels[labels > 0] + (smoothing / (nclasses - 1))
+    elif type(confidence) is np.array:
+        # confidence is an nclasses by  nclasses array
+        # one row for each class
+        # column values indicate confidence (rows sum to 1)
+        # the identity matrix indicates full confidence
+        # ex: 70% confident in the labels for class 1
+        #     uniform prior on label error distribution
+        # then row 1 is [0.1, 0.7, 0.1, 0.1]
+        for cls in range(nclasses):
+            labels[np.where(labels[...,cls])] = confidence[cls]
     return labels
 
 def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True):
