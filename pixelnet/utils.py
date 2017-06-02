@@ -28,7 +28,6 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
 
         # get sample pixel labels
         ind = coords * np.array([1, images.shape[1], images.shape[2]])
-        ind = ind.astype(np.int32)
         bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
         pixel_labels = target_labels[bb,xx,yy]
 
@@ -39,7 +38,16 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
             pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([sample_images, coords], pixel_labels)
-        
+
+def smooth_labels(labels, smoothing=0.0):
+    """ Apply label smoothing for classification task 
+        Correct class should be 1-smoothing
+        Other classes should be smoothing/(nclasses-1)"""
+    nclasses = labels.shape[1]
+    labels = labels * (1 - smoothing)
+    labels[labels > 0] = labels[labels > 0] + (smoothing / (nclasses - 1))
+    return labels
+
 def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True):
     """ generate samples of pixels in batches of training images 
     try to balance the class distribution over the minibatch.
@@ -72,6 +80,7 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4,
             # convert labels to categorical indicators for cross-entropy loss
             s = pixel_labels.shape
             pixel_labels = to_categorical(pixel_labels.flat, num_classes=nclasses)
+            pixel_labels = smooth_labels(pixel_labels, smoothing=0.1)
             pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([sample_images, coords], pixel_labels)
