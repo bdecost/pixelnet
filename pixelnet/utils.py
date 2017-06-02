@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import os
 import numpy as np
 
@@ -62,7 +63,7 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4,
         ind = np.concatenate(ind, axis=0)
         ind = ind.reshape((batchsize,npix,3))
 
-        coords = ind / np.array([1, images.shape[1], images.shape[2]])
+        coords = ind.astype(np.float32) / np.array([1, images.shape[1], images.shape[2]])
 
         bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
         pixel_labels = target_labels[bb,xx,yy]
