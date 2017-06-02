@@ -92,7 +92,7 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4,
             # convert labels to categorical indicators for cross-entropy loss
             s = pixel_labels.shape
             pixel_labels = to_categorical(pixel_labels.flat, num_classes=nclasses)
-            pixel_labels = smooth_labels(pixel_labels, smoothing=0.1)
+            pixel_labels = smooth_labels(pixel_labels, confidence=0.9)
             pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([sample_images, coords], pixel_labels)
