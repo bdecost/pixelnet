@@ -7,7 +7,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.utils.np_utils import to_categorical
 
-def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True):
+def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True, confidence=1.0):
     """ generate random samples of pixels in batches of training images """
     n_images = images.shape[0]
 
@@ -35,6 +35,8 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
             # convert labels to categorical indicators for cross-entropy loss
             s = pixel_labels.shape
             pixel_labels = to_categorical(pixel_labels.flat, num_classes=nclasses)
+            if np.any(confidence != 1.0):
+                pixel_labels = smooth_labels(pixel_labels, confidence=confidence)
             pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([sample_images, coords], pixel_labels)
@@ -44,7 +46,7 @@ def smooth_labels(labels, confidence=1.0):
         Correct class should be 1-smoothing
         Other classes should be smoothing/(nclasses-1)"""
     nclasses = labels.shape[1]
-    if type(confidence) is int:
+    if type(confidence) is float:
         smoothing = 1 - confidence
         labels = labels * (1 - smoothing)
         labels[labels > 0] = labels[labels > 0] + (smoothing / (nclasses - 1))
@@ -92,7 +94,8 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4,
             # convert labels to categorical indicators for cross-entropy loss
             s = pixel_labels.shape
             pixel_labels = to_categorical(pixel_labels.flat, num_classes=nclasses)
-            pixel_labels = smooth_labels(pixel_labels, confidence=confidence)
+            if np.any(confidence != 1.0):
+                pixel_labels = smooth_labels(pixel_labels, confidence=confidence)
             pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([sample_images, coords], pixel_labels)
