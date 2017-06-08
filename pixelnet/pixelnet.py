@@ -19,7 +19,7 @@ def conv2d_bn(x, n_channels, n_rows, n_cols, weight_decay=1e-5, padding='same', 
     x = Conv2D(n_channels, (n_rows, n_cols),
                strides=strides, padding=padding,
                kernel_initializer='he_normal',
-               kernel_regularizer=regularizers.l2(0.01))(x)
+               kernel_regularizer=regularizers.l2(weight_decay))(x)
     x = BatchNormalization(axis=bn_axis, scale=False)(x)
     x = Activation('relu', name=name)(x)
     return x
