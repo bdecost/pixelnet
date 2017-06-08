@@ -28,6 +28,7 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
 
         # get sample pixel labels
         ind = coords * np.array([1, images.shape[1], images.shape[2]])
+        ind = ind.astype(np.int32)
         bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
         pixel_labels = target_labels[bb,xx,yy]
 
