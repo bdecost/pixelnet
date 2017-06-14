@@ -28,7 +28,7 @@ def augment(I, L, rotation_range, zoom_range):
         LL = ndi.zoom(LL, zfactor, order=0)
 
         # crop out a region of the original image shape
-        hh, ww = II.shape
+        hh, ww, cc = II.shape
         x = np.random.choice(range(ww-w))
         y = np.random.choice(range(hh-h))
 
