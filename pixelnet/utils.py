@@ -7,7 +7,37 @@ import tensorflow as tf
 from keras import backend as K
 from keras.utils.np_utils import to_categorical
 
-def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True):
+def augment(I, L, rotation_range, zoom_range):
+    """ Apply random image rotation and zoom with mirror boundary conditions
+    crop to original spatial dimensions
+    """
+    num_images, h, w, c = I.shape
+    for idx in range(num_images):
+        II, LL = I[idx], L[idx]
+
+        # apply a random rotation with out cropping back to the original size
+        angle =  rotation_range * np.random.random()
+        II = ndi.rotate(II, angle, reshape=False, mode='reflect')
+        LL = ndi.rotate(LL, angle, reshape=False, mode='reflect', order=0)
+
+        # apply a random zoom
+        zfactor = 1 + zoom_range*np.random.random()
+        II = ndi.zoom(II, zfactor)
+        LL = ndi.zoom(LL, zfactor, order=0)
+
+        # crop out a region of the original image shape
+        hh, ww = II.shape
+        x = np.random.choice(range(ww-w))
+        y = np.random.choice(range(hh-h))
+
+        # overwrite the input
+        I[idx] = II[y:y+h, x:x+w]
+        L[idx] = LL[y:y+h,x:x+w]
+        
+    return I, L
+
+def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True,
+                         horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0):
     """ generate random samples of pixels in batches of training images """
     n_images = images.shape[0]
 
@@ -17,6 +47,10 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
         im_idx = np.random.choice(range(n_images), batchsize, replace=replace_samples)
         sample_images = images[im_idx]
         target_labels = labels[im_idx]
+
+        # jointly apply transformations to input and label images for data augmentation
+        if horizontal_flip or vertical_flip or rotation_range or zoom_range:
+            sample_images, target_labels = augment(sample_images, target_labels, rotation_range, zoom_range)
         
         # sample coordinates should include the batch index for tf.gather_nd
         coords = np.ones((batchsize, npix, 3))
