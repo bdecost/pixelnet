@@ -2,6 +2,7 @@
 
 import os
 import numpy as np
+import scipy.ndimage as ndi
 
 import tensorflow as tf
 from keras import backend as K
