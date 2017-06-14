@@ -7,6 +7,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.utils.np_utils import to_categorical
 
+
 def augment(I, L, rotation_range, zoom_range):
     """ Apply random image rotation and zoom with mirror boundary conditions
     crop to original spatial dimensions
@@ -37,7 +38,7 @@ def augment(I, L, rotation_range, zoom_range):
     return I, L
 
 def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True,
-                         horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0):
+                         confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0):
     """ generate random samples of pixels in batches of training images """
     n_images = images.shape[0]
 
@@ -62,6 +63,7 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
 
         # get sample pixel labels
         ind = coords * np.array([1, images.shape[1], images.shape[2]])
+        ind = ind.astype(np.int32)
         bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
         pixel_labels = target_labels[bb,xx,yy]
 
@@ -69,6 +71,8 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
             # convert labels to categorical indicators for cross-entropy loss
             s = pixel_labels.shape
             pixel_labels = to_categorical(pixel_labels.flat, num_classes=nclasses)
+            if np.any(confidence != 1.0):
+                pixel_labels = smooth_labels(pixel_labels, confidence=confidence)
             pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([sample_images, coords], pixel_labels)
@@ -78,7 +82,7 @@ def smooth_labels(labels, confidence=1.0):
         Correct class should be 1-smoothing
         Other classes should be smoothing/(nclasses-1)"""
     nclasses = labels.shape[1]
-    if type(confidence) is int:
+    if type(confidence) is float:
         smoothing = 1 - confidence
         labels = labels * (1 - smoothing)
         labels[labels > 0] = labels[labels > 0] + (smoothing / (nclasses - 1))
@@ -126,7 +130,8 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4,
             # convert labels to categorical indicators for cross-entropy loss
             s = pixel_labels.shape
             pixel_labels = to_categorical(pixel_labels.flat, num_classes=nclasses)
-            pixel_labels = smooth_labels(pixel_labels, confidence=confidence)
+            if np.any(confidence != 1.0):
+                pixel_labels = smooth_labels(pixel_labels, confidence=confidence)
             pixel_labels = pixel_labels.reshape((s[0], s[1], nclasses))
 
         yield ([sample_images, coords], pixel_labels)
