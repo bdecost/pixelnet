@@ -38,7 +38,28 @@ def augment(I, L, rotation_range, zoom_range):
         
     return I, L
 
-def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True,
+def random_crop(images, labels, cropsize):
+    """ randomly crop an image tensor to (batch, cropsize, cropsize, channels) """
+    b, h, w, c = images.shape
+    output_shape = (b, cropsize, cropsize, c)
+
+    # preallocate output tensors
+    I = np.zeros(output_shape, dtype=images.dtype)
+    L = np.zeros(output_shape, dtype=labels.dtype)
+
+    # choose random cropsizeXcropsize windows
+    xx = np.random.choice(range(w - cropsize), size=b)
+    yy = np.random.choice(range(h - cropsize), size=b)
+
+    # crop input image and labels consistently
+    for idx in range(b):
+        x, y = xx[idx], yy[idx]
+        I[idx] = images[idx,y:y+cropsize,x:x+cropsize,:]
+        L[idx] = labels[idx,y:y+cropsize,x:x+cropsize,:]
+        
+    return I, L
+
+def random_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, nclasses=4, replace_samples=True, categorical=True,
                          confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0):
     """ generate random samples of pixels in batches of training images """
     n_images = images.shape[0]
@@ -53,7 +74,10 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
         # jointly apply transformations to input and label images for data augmentation
         if horizontal_flip or vertical_flip or rotation_range or zoom_range:
             sample_images, target_labels = augment(sample_images, target_labels, rotation_range, zoom_range)
-        
+
+        if cropsize is not None:
+            sample_images, target_labels = random_crop(sample_images, target_labels, cropsize)
+            
         # sample coordinates should include the batch index for tf.gather_nd
         coords = np.ones((batchsize, npix, 3))
         coords = coords * np.arange(batchsize)[:,np.newaxis,np.newaxis]
@@ -63,7 +87,7 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, rep
         coords[:,:,1:] = p
 
         # get sample pixel labels
-        ind = coords * np.array([1, images.shape[1], images.shape[2]])
+        ind = coords * np.array([1, sample_images.shape[1], sample_images.shape[2]])
         ind = ind.astype(np.int32)
         bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
         pixel_labels = target_labels[bb,xx,yy]
