@@ -123,7 +123,8 @@ def smooth_labels(labels, confidence=1.0):
             labels[np.where(labels[...,cls])] = confidence[cls]
     return labels
 
-def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4, replace_samples=True, categorical=True, confidence=None):
+def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, nclasses=4, replace_samples=True, categorical=True,
+                             confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0):
     """ generate samples of pixels in batches of training images 
     try to balance the class distribution over the minibatch.
     """
@@ -136,6 +137,13 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4,
         sample_images = images[im_idx]
         target_labels = labels[im_idx]
 
+        # jointly apply transformations to input and label images for data augmentation
+        if horizontal_flip or vertical_flip or rotation_range or zoom_range:
+            sample_images, target_labels = augment(sample_images, target_labels, rotation_range, zoom_range)
+
+        if cropsize is not None:
+            sample_images, target_labels = random_crop(sample_images, target_labels, cropsize)
+
         # sample coordinates should include the batch index for tf.gather_nd
         ind = []
         for cls in range(nclasses):
@@ -146,7 +154,7 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, nclasses=4,
         ind = np.concatenate(ind, axis=0)
         ind = ind.reshape((batchsize,npix,3))
 
-        coords = ind.astype(np.float32) / np.array([1, images.shape[1], images.shape[2]])
+        coords = ind.astype(np.float32) / np.array([1, sample_images.shape[1], sample_images.shape[2]])
 
         bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
         pixel_labels = target_labels[bb,xx,yy]
