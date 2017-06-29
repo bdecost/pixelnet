@@ -41,11 +41,10 @@ def augment(I, L, rotation_range, zoom_range):
 def random_crop(images, labels, cropsize):
     """ randomly crop an image tensor to (batch, cropsize, cropsize, channels) """
     b, h, w, c = images.shape
-    output_shape = (b, cropsize, cropsize, c)
 
     # preallocate output tensors
-    I = np.zeros(output_shape, dtype=images.dtype)
-    L = np.zeros(output_shape, dtype=labels.dtype)
+    I = np.zeros((b, cropsize, cropsize, c), dtype=images.dtype)
+    L = np.zeros((b, cropsize, cropsize), output_shape, dtype=labels.dtype)
 
     # choose random cropsizeXcropsize windows
     xx = np.random.choice(range(w - cropsize), size=b)
