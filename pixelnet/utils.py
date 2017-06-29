@@ -44,7 +44,7 @@ def random_crop(images, labels, cropsize):
 
     # preallocate output tensors
     I = np.zeros((b, cropsize, cropsize, c), dtype=images.dtype)
-    L = np.zeros((b, cropsize, cropsize), output_shape, dtype=labels.dtype)
+    L = np.zeros((b, cropsize, cropsize), dtype=labels.dtype)
 
     # choose random cropsizeXcropsize windows
     xx = np.random.choice(range(w - cropsize), size=b)
