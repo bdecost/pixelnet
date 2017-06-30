@@ -132,10 +132,10 @@ def pixelnet_model(nclasses=4, inference=False, bottleneck=False):
     )
     x = flatten_pixels(x)
 
-    x = Dense(1024, activation='relu',kernel_regularizer=regularizers.l2(0.01))(x)
+    x = Dense(1024, activation='relu',kernel_regularizer=regularizers.l2(1e-4))(x)
     x = Dropout(0.5)(x)
     
-    x = Dense(1024, activation='relu',kernel_regularizer=regularizers.l2(0.01))(x)
+    x = Dense(1024, activation='relu',kernel_regularizer=regularizers.l2(1e-4))(x)
     x = Dropout(0.5)(x)
 
     x = Dense(nclasses, activation='softmax', name='predictions')(x)
