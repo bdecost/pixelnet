@@ -117,7 +117,7 @@ def pixelnet_model(nclasses=4, inference=False, bottleneck=False):
         skip_connections = [h1, h2, h3, h4, h5]
         
         if bottleneck:
-            skip_connections.append(upsample([x7, inputcoord])
+            skip_connections.append(upsample([x7, inputcoord]))
         
     # now we have shape (batch, sample, channel)
     x = Concatenate()(skip_connections)
