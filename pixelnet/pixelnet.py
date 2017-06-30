@@ -24,7 +24,7 @@ def conv2d_bn(x, n_channels, n_rows, n_cols, weight_decay=1e-5, padding='same', 
     x = Activation('relu', name=name)(x)
     return x
 
-def pixelnet_model(nclasses=4, inference=False):
+def pixelnet_model(nclasses=4, inference=False, bottleneck=False):
     """ Use sparse upsample implementations to define a PixelNet model
 
     @article{pixelnet,
@@ -76,6 +76,11 @@ def pixelnet_model(nclasses=4, inference=False):
     x = conv2d_bn(x, 128, 3, 3, name='block5_conv3')
     x5 = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
 
+
+    if bottleneck:
+        x6 = Conv2D(1024, (7, 7), activation='relu', padding='valid', name='conv6')(x5)
+        x7 = Conv2D(1024, (1,1), activation='relu', padding='valid', name='conv7')(x6)
+    
     batchsize, h, w = tf.shape(inputdata)[0], tf.shape(inputdata)[1], tf.shape(inputdata)[2]
 
     if inference:
@@ -90,7 +95,12 @@ def pixelnet_model(nclasses=4, inference=False):
         h3 = upsample(x3)
         h4 = upsample(x4)
         h5 = upsample(x5)
+        
+        skip_connections = [h1, h2, h3, h4, h5]
 
+        if bottleneck:
+            skip_connections.append(upsample(x7))
+                                    
     else:
         print('training phase.')
         upsample = Lambda(
@@ -103,9 +113,14 @@ def pixelnet_model(nclasses=4, inference=False):
         h3 = upsample([x3, inputcoord])
         h4 = upsample([x4, inputcoord])
         h5 = upsample([x5, inputcoord])
-
+        
+        skip_connections = [h1, h2, h3, h4, h5]
+        
+        if bottleneck:
+            skip_connections.append(upsample([x7, inputcoord])
+        
     # now we have shape (batch, sample, channel)
-    x = Concatenate()([h1, h2, h3, h4, h5])
+    x = Concatenate()(skip_connections)
 
     # flatten into pixel features
     nchannels = tf.shape(x)[-1]
