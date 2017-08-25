@@ -78,8 +78,8 @@ def pixelnet_model(nclasses=4, inference=False, bottleneck=False):
 
 
     if bottleneck:
-        x6 = Conv2D(1024, (7, 7), activation='relu', padding='valid', name='conv6')(x5)
-        x7 = Conv2D(1024, (1,1), activation='relu', padding='valid', name='conv7')(x6)
+        x6 = conv2d_bn(x5, 1024, 7, 7, padding='valid', name='conv6')
+        x7 = conv2d_bn(x6, 1024, 1, 1, padding='valid', name='conv7')
     
     batchsize, h, w = tf.shape(inputdata)[0], tf.shape(inputdata)[1], tf.shape(inputdata)[2]
 

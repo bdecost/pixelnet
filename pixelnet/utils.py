@@ -7,15 +7,33 @@ import scipy.ndimage as ndi
 import tensorflow as tf
 from keras import backend as K
 from keras.utils.np_utils import to_categorical
+from keras.preprocessing.image import flip_axis
 
+def random_intensity_shift(x, intensity_fraction=0.01):
+    min_x, max_x = np.min(x), np.max(x)
+    intensity = intensity_fraction * max_x - min_x
+    return np.clip(x + np.random.uniform(-intensity, intensity), min_x, max_x)
 
-def augment(I, L, rotation_range, zoom_range):
+def augment(I, L, rotation_range, zoom_range, horizontal_flip=False, vertical_flip=False, intensity_shift=0):
     """ Apply random image rotation and zoom with mirror boundary conditions
     crop to original spatial dimensions
     """
     num_images, h, w, c = I.shape
     for idx in range(num_images):
         II, LL = I[idx], L[idx]
+
+        if horizontal_flip:
+            if np.random.random() < 0.5:
+                II = flip_axis(II, 1)
+                LL = flip_axis(LL, 1)
+
+        if vertical_flip:
+            if np.random.random() < 0.5:
+                II = flip_axis(II, 0)
+                LL = flip_axis(LL, 0)
+
+        if intensity_shift > 0:
+            II = random_intensity_shift(II, intensity_fraction=intensity_shift)
 
         # apply a random rotation with out cropping back to the original size
         angle =  rotation_range * np.random.random()
@@ -59,7 +77,7 @@ def random_crop(images, labels, cropsize):
     return I, L
 
 def random_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, nclasses=4, replace_samples=True, categorical=True,
-                         confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0):
+                         confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0, intensity_shift=0.0):
     """ generate random samples of pixels in batches of training images """
     n_images = images.shape[0]
 
@@ -72,7 +90,8 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, 
 
         # jointly apply transformations to input and label images for data augmentation
         if horizontal_flip or vertical_flip or rotation_range or zoom_range:
-            sample_images, target_labels = augment(sample_images, target_labels, rotation_range, zoom_range)
+            sample_images, target_labels = augment(sample_images, target_labels, rotation_range, zoom_range,
+                                                   horizontal_flip, vertical_flip, intensity_shift)
 
         if cropsize is not None:
             sample_images, target_labels = random_crop(sample_images, target_labels, cropsize)
@@ -123,7 +142,7 @@ def smooth_labels(labels, confidence=1.0):
     return labels
 
 def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, nclasses=4, replace_samples=True, categorical=True,
-                             confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0):
+                             confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0, intensity_shift=0.0):
     """ generate samples of pixels in batches of training images 
     try to balance the class distribution over the minibatch.
     """
@@ -138,7 +157,8 @@ def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=No
 
         # jointly apply transformations to input and label images for data augmentation
         if horizontal_flip or vertical_flip or rotation_range or zoom_range:
-            sample_images, target_labels = augment(sample_images, target_labels, rotation_range, zoom_range)
+            sample_images, target_labels = augment(sample_images, target_labels, rotation_range, zoom_range,
+                                                   horizontal_flip, vertical_flip, intensity_shift)
 
         if cropsize is not None:
             sample_images, target_labels = random_crop(sample_images, target_labels, cropsize)
