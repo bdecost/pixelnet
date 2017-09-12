@@ -100,14 +100,17 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, 
         coords = np.ones((batchsize, npix, 3))
         coords = coords * np.arange(batchsize)[:,np.newaxis,np.newaxis]
 
-        # choose random pixel coordinates on (0, 1) interval
-        p = np.random.random((batchsize,npix,2))
-        coords[:,:,1:] = p
+        # choose random pixel coordinates
+        xx = np.random.randint(sample_images.shape[1]-1, size=(batchsize, npix))
+        yy = np.random.randint(sample_images.shape[2]-1, size=(batchsize, npix))
+        p = np.dstack((xx, yy))
+        coords[:,:,1:] = p / np.array([sample_images.shape[1], sample_images.shape[2]])
 
         # get sample pixel labels
-        ind = coords * np.array([1, sample_images.shape[1], sample_images.shape[2]])
-        ind = ind.astype(np.int32)
-        bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
+        bb = coords[...,0].astype(np.int32)
+        # ind = coords * np.array([1, sample_images.shape[1], sample_images.shape[2]])
+        # ind = ind.astype(np.int32)
+        # bb, xx, yy = ind[:,:,0], ind[:,:,1], ind[:,:,2]
         pixel_labels = target_labels[bb,xx,yy]
 
         if categorical:
