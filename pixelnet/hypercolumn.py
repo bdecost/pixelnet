@@ -85,7 +85,7 @@ def random_foreground_indices(L, npix=4096, bgval=-1):
     
     return np.stack(ind, axis=0)
 
-def build_model(base_model, input_layers, mode='dense', batchnorm=False):
+def build_model(base_model, input_layers, mode='dense', batchnorm=False, relu=True):
     inputdata = base_model.input
     
     batchsize, h, w = tf.shape(inputdata)[0], tf.shape(inputdata)[1], tf.shape(inputdata)[2]
@@ -97,8 +97,9 @@ def build_model(base_model, input_layers, mode='dense', batchnorm=False):
             BatchNormalization(scale=False, name='{}_bn'.format(name))(x)
             for x, name in zip(X, input_layers)
             ]
-    
-    X = [Activation('relu')(x) for x in X]
+
+    if relu:
+        X = [Activation('relu')(x) for x in X]
 
     if mode == 'dense':
         inputs = inputdata

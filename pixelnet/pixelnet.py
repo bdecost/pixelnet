@@ -5,10 +5,15 @@ from keras import models
 from keras import regularizers
 import keras.backend as K
 
+
 def dense_bn(x, channels, name=None):
     x = layers.Dense(channels, name='{}_fc'.format(name), kernel_regularizer=regularizers.l2(1e-4))(x)
     x = layers.BatchNormalization(scale=False, name='{}_bn'.format(name))(x)
     return layers.Activation('relu', name=name)(x)
+
+def dense_selu(x, channels, name=None):
+    x = layers.Dense(channels, name='{}/fc'.format(name), kernel_initializer='lecun_normal', kernel_regularizer=regularizers.l2(1e-4))(x)
+    return layers.Activation('selu', name=name+'/selu')(x)
 
 def flatten_pixels(nchannels):
     """ rearrange hypercolumns into a pixelwise data matrix """
@@ -57,7 +62,7 @@ def unflatten_pixels(inputs, nclasses=4, mode='dense'):
         
     return unflatten
     
-def build_model(hc_model, width=1024, depth=2, dropout_rate=0.5, nclasses=4, mode='dense', activation='softmax'):
+def build_model(hc_model, width=1024, depth=2, dropout_rate=0.5, nclasses=4, mode='dense', activation='softmax', selu=False, mc_dropout=False):
     """ PixelNet: define an MLP model over a hypercolumn model given as input 
 
     @article{pixelnet,
@@ -79,10 +84,15 @@ def build_model(hc_model, width=1024, depth=2, dropout_rate=0.5, nclasses=4, mod
     x = hc_model.output
     nchannels = tf.shape(x)[-1]
     x = flatten_pixels(nchannels)(x)
-                       
-    for idx in range(1, depth+1):
-        x = dense_bn(x, width, name='mlp{}'.format(idx))
-        x = layers.Dropout(dropout_rate)(x)
+
+    if selu:
+        for idx in range(depth):
+            x = dense_selu(x, width, name='mlp{}'.format(idx+1))
+            x = layers.AlphaDropout(dropout_rate)(x)
+    else:
+        for idx in range(depth):
+            x = dense_bn(x, width, name='mlp{}'.format(idx+1))
+            x = layers.Dropout(dropout_rate)(x, training=mc_dropout)
 
     x = layers.Dense(nclasses, activation=activation, name='predictions')(x)
     
