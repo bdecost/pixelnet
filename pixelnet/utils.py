@@ -53,7 +53,7 @@ def augment(I, L, rotation_range, zoom_range, horizontal_flip=False, vertical_fl
         # overwrite the input
         I[idx] = II[y:y+h, x:x+w]
         L[idx] = LL[y:y+h,x:x+w]
-        
+
     return I, L
 
 def random_crop(images, labels, cropsize):
@@ -72,8 +72,8 @@ def random_crop(images, labels, cropsize):
     for idx in range(b):
         x, y = xx[idx], yy[idx]
         I[idx] = images[idx,y:y+cropsize,x:x+cropsize,:]
-        L[idx] = labels[idx,y:y+cropsize,x:x+cropsize,:]
-        
+        L[idx] = labels[idx,y:y+cropsize,x:x+cropsize]
+
     return I, L
 
 def random_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, nclasses=4, replace_samples=True, categorical=True,
@@ -95,7 +95,7 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, 
 
         if cropsize is not None:
             sample_images, target_labels = random_crop(sample_images, target_labels, cropsize)
-            
+
         # sample coordinates should include the batch index for tf.gather_nd
         coords = np.ones((batchsize, npix, 3))
         coords = coords * np.arange(batchsize)[:,np.newaxis,np.newaxis]
@@ -124,14 +124,15 @@ def random_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, 
         yield ([sample_images, coords], pixel_labels)
 
 def smooth_labels(labels, confidence=1.0):
-    """ Apply label smoothing for classification task 
-        Correct class should be 1-smoothing
-        Other classes should be smoothing/(nclasses-1)"""
+    """ Apply label smoothing for classification task (arXiv:1512.00567) """
+
     nclasses = labels.shape[1]
+
     if type(confidence) is float:
-        smoothing = 1 - confidence
-        labels = labels * (1 - smoothing)
-        labels[labels > 0] = labels[labels > 0] + (smoothing / (nclasses - 1))
+        epsilon = 1 - confidence
+        labels = labels * (1 - epsilon)
+        labels += (epsilon / nclasses)
+
     elif type(confidence) is np.array:
         # confidence is an nclasses by  nclasses array
         # one row for each class
@@ -146,7 +147,7 @@ def smooth_labels(labels, confidence=1.0):
 
 def stratified_pixel_samples(images, labels, batchsize=4, npix=2048, cropsize=None, nclasses=4, replace_samples=True, categorical=True,
                              confidence=1.0, horizontal_flip=False, vertical_flip=False, rotation_range=0.0, zoom_range=0.0, intensity_shift=0.0):
-    """ generate samples of pixels in batches of training images 
+    """ generate samples of pixels in batches of training images
     try to balance the class distribution over the minibatch.
     """
     n_images = images.shape[0]
