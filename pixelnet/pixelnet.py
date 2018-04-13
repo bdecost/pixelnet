@@ -3,16 +3,22 @@ import tensorflow as tf
 from keras import layers
 from keras import models
 from keras import regularizers
+from keras import initializers
 import keras.backend as K
 
+init = initializers.VarianceScaling(
+    scale=0.5,
+    mode='fan_in',
+    distribution='normal'
+)
 
-def dense_bn(x, channels, name=None):
-    x = layers.Dense(channels, name='{}_fc'.format(name), kernel_regularizer=regularizers.l2(1e-4))(x)
-    x = layers.BatchNormalization(scale=False, name='{}_bn'.format(name))(x)
+def dense_bn(x, channels, name=None, l2_reg=1e-4):
+    x = layers.Dense(channels, use_bias=False, name='{}_fc'.format(name), kernel_regularizer=regularizers.l2(l2_reg))(x)
+    x = layers.BatchNormalization(scale=True, name='{}_bn'.format(name))(x)
     return layers.Activation('relu', name=name)(x)
 
-def dense_selu(x, channels, name=None):
-    x = layers.Dense(channels, name='{}/fc'.format(name), kernel_initializer='lecun_normal', kernel_regularizer=regularizers.l2(1e-4))(x)
+def dense_selu(x, channels, name=None, l2_reg=1e-4):
+    x = layers.Dense(channels, name='{}/fc'.format(name), kernel_initializer=init, kernel_regularizer=regularizers.l2(l2_reg))(x)
     return layers.Activation('selu', name=name+'/selu')(x)
 
 def flatten_pixels(nchannels):
@@ -62,7 +68,7 @@ def unflatten_pixels(inputs, nclasses=4, mode='dense'):
         
     return unflatten
     
-def build_model(hc_model, width=1024, depth=2, dropout_rate=0.5, nclasses=4, mode='dense', activation='softmax', selu=False, mc_dropout=False):
+def build_model(hc_model, width=1024, depth=2, dropout_rate=0.5, nclasses=4, mode='dense', activation='softmax', selu=False, mc_dropout=False, l2_reg=1e-4):
     """ PixelNet: define an MLP model over a hypercolumn model given as input 
 
     @article{pixelnet,
@@ -87,11 +93,11 @@ def build_model(hc_model, width=1024, depth=2, dropout_rate=0.5, nclasses=4, mod
 
     if selu:
         for idx in range(depth):
-            x = dense_selu(x, width, name='mlp{}'.format(idx+1))
+            x = dense_selu(x, width, name='mlp{}'.format(idx+1), l2_reg=l2_reg)
             x = layers.AlphaDropout(dropout_rate)(x)
     else:
         for idx in range(depth):
-            x = dense_bn(x, width, name='mlp{}'.format(idx+1))
+            x = dense_bn(x, width, name='mlp{}'.format(idx+1), l2_reg=l2_reg)
             x = layers.Dropout(dropout_rate)(x, training=mc_dropout)
 
     x = layers.Dense(nclasses, activation=activation, name='predictions')(x)
